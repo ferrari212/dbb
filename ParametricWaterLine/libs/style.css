@@ -1,0 +1,74 @@
+/***** SVG PLOT *****/
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}
+
+svg path {
+  fill: none;
+}
+svg circle {
+  fill: white;
+  stroke: #aaa;
+  cursor: move;
+}
+svg .points-menu g {
+  opacity: 0.2;
+}
+svg .points-menu g.active {
+  cursor: pointer;
+  opacity: 1;
+}
+svg .points-menu line {
+  stroke: #777;
+  stroke-width: 3;
+}
+svg .points-menu rect {
+  fill: white;
+}
+
+.slidecontainer {
+  width: 100%;
+}
+
+/***** CUSTOM SLIDER *****/
+.slider {
+  -webkit-appearance: none;
+  height: 10px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background:steelblue;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background:steelblue;
+  cursor: pointer;
+}

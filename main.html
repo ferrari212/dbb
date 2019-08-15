@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <title>DBB Method</title>
+
+        <link href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/yeti/bootstrap.min.css" rel="stylesheet" integrity="sha384-w6tc0TXjTUnYHwVwGgnYyV12wbRoJQo9iMlC2KdkdmVvntGgzT9jvqNEF/uKaF4m" crossorigin="anonymous">       
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="http://cdn.jsdelivr.net/jquery.flot/0.8.3/jquery.flot.min.js"></script>
+
+        <script src="libs/snap.svg-min.js"></script>
+        <script src="libs/d3.min.js"></script>
+        
+        <link href="snippets/style.css" rel="stylesheet">
+        <script src="snippets/holtrop.js"></script>
+        <script src="snippets/jensen.js"></script>
+        <script src="snippets/parametric.js"></script>
+
+        
+    </head>
+    
+    <body>
+            
+            <div class="container">
+                <div class="row" style="margin-top: 100px">
+                    <div class="col-lg-12">
+                        <h1>DBB Method</h1>
+                        <h4>A Parametric Ship Design Application</h4>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 40px">
+                    <div class="col-lg-12">
+                        <div align="right">
+                            <small>
+                                by Diogo Kramel <br> based on the work of <a href ="mailto:alexander.piperakis.09@alumni.ucl.ac.uk">Alexander S. Piperakis </a> (<a href="http://mecheng.ucl.ac.uk/research/marine/">UCL</a>) and 
+                                <a href="https://www.ntnu.edu/employees/henrique.gaspar">Henrique M. Gaspar (NTNU) </a>
+                                <br> September 2019, v1.0
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 60px">
+                    <div class="col-lg-6">
+                        <p>
+                            The DBB (Design Building Blocks) approach aims to assist the designer in separating the
+                            ship’s functions and sub-functions into discrete elements and position them appropriately, putting 
+                            architectural factors in the center of the process, in contrast to the traditional sequential design 
+                            process (Andrews and Dicks, 1997).
+                        </p>
+                        <p>
+                            This web application makes use of the DBB method to provide an initial assessment of hydrostatics, hydrodynamics, and seakeeping properties.
+                            The hull is parametric and can be designed through its basic dimensions and auxiliary factors, from which various properties are obtained. Bulkheads can be added throughout the length.
+                            Additionally, blocks representing the main ship's functions can be added, removed, and resized.
+                        </p>
+                    </div>
+                    <div class="col-lg-6">
+                        <p>
+                            The analysis is structured in four sequential steps, in which the inputs of one section directly impact the next, as follows:
+                        </p>
+                        <ol type="1">
+                            <li>Parametric Hull Modelling</li> 
+                            <li>Hydrostatic and Stability</li>
+                            <li>Hydrodynamics Analysis</li>
+                            <li>Seakeeping </li>
+                        </ol>
+                        <p>More details of the implementation and coding framework can be found in the <a href="http://dbb.ucl.im/CodeFlowcharts.pdf">Code Flowcharts</a>.</p>
+                        <tr><td colspan="3"></td></tr>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 60px">
+                    <div class="col-lg-12">
+                        <h4 style="padding-bottom: 40px">1. Parametric Hull Modelling</h4>
+                    </div>
+                </div>
+                
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <p>
+                                In order to efficiently control the building blocks, it is necessary to download the standard DBB data,
+                                change it accordingly, and upload it again. To retrieve data from each building block, the top view of of the hull (left) sections 
+                                is entirely clickable and will provide a short summary of the main properties (right).
+                            </p>
+                        </div>
+                        <div class="col-lg-6">
+                            <p>
+                                Two default vessels are available to an initial assessment. The first is a frigate based in the KNM Narvik F304 model. The second,
+                                a Platform Supply Vessel, based on the PX121 model by Ulstein.
+                            </p>
+                        </div>
+                        
+                        <div style="margin-left: 180px" class="cc-selector">
+                            <input id="cat" type="radio" name="credit-card" value="cat" onclick="runFrigate()" checked/>
+                            <label class="drinkcard-cc cat" for="cat"></label>
+                            <input id="dog" type="radio" name="credit-card" value="dog" onclick="runXBow()"/>
+                            <label class="drinkcard-cc dog" for="dog"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div id="grid_here" style='width:auto; height:auto; float:left; margin-left:250px; margin-right:30px'></div>
+            </div>
+            
+            <div id="tbl1" style='width:auto; height:auto;'>
+                <table border = "0"> <!--http://www.tutorialspoint.com/html/html_tables.htm-->
+                    
+                    <tr><td width="215"></td><td width="50"></td><td></td></tr>
+                    
+                    <tr><td colspan="3"><button id = "Import_shipd" style = "cursor:pointer; Width:200px " title = "Load a file">Import Ship Data</button></td></tr>
+                    <tr><td colspan="3"><button id = "Import_blockd" style = "cursor:pointer; Width:200px" title = "Load a file">Import DBB Data</button></td></tr>
+                    
+                    
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                    
+                    <tr><th colspan="2">A. Ship Data</th></tr>
+                    <tr><td>Ship Name</td><td></td><td><span id="shipname"></span></td></tr>
+                    <tr><td>Overall Length (LOA)</td>
+                        <td><span id="loa_val"></span>m</td>
+                        <td><input type="range" class="slider" id="canv_x" value=0 min="0" max="300" onchange="update_loaboa()" oninput="change_number()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Overall Beam (BOA)</td>
+                        <td><span id="boa_val"></span>m</td>
+                        <td> <input type="range" class="slider" id="canv_y" value=0 min="0" max="80" oninput="update_loaboa()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Draft (T)</td>
+                        <td><span id="draft_val"></span>m</td>
+                        <td> <input type="range" class="slider" id="draft_s" value=0 min="0" max="10" oninput="update_loaboa()" step="0.1"></td>
+                    </tr>
+                                        
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                    
+                    <tr><th colspan="2"><strong>B. Hullform Coefficients</strong></th></tr>
+                    <tr>
+                        <td>Midship Fullness</td>
+                        <td><span id="ms_val"></span></td>
+                        <td><input type="range" class="slider" id="ms_s" value=0 min="0.1" max="10" oninput="hullSliders()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Bow Fullness</td>
+                        <td><span id="bow_val"></span></td>
+                        <td><input type="range" class="slider" id="bow_s" value=0 min="0.1" max="10" oninput="hullSliders()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Transom Fullness</td>
+                        <td><span id="tr_val"></span></td>
+                        <td><input type="range" class="slider" id="tr_s" value=0 min="0.1" max="10" oninput="hullSliders()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Forward Deck Fullness</td>
+                        <td><span id="deck_val"></span></td>
+                        <td><input type="range" class="slider" id="deck_s" value=0 min="0.1" max="10" oninput="hullSliders()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Transom Beam</td>
+                        <td><span id="tb_val"></span></td>
+                        <td><input type="range" class="slider" id="tb_s" value=0 min="0.01" max="0.99" oninput="hullSliders()" step="0.01"></td>
+                    </tr>
+                    <tr>
+                        <td>Transom Draught</td>
+                        <td><span id="td_val"></span></td>
+                        <td><input type="range" class="slider" id="td_s" value=0 min="0.01" max="0.99" oninput="hullSliders()" step="0.01"></td>
+                    </tr>
+                    <tr>
+                        <td>ACU</td>
+                        <td><span id="acu_val"></span></td>
+                        <td><input type="range" class="slider" id="acu_s" value=0 min="0.01" max="0.49" oninput="hullSliders()" step="0.01"></td>
+                    </tr>
+                    <tr>
+                        <td>Forward Keel</td><td><span id="kf_val"></span></td>
+                        <td><input type="range" class="slider" id="kf_s" value=0 min="0.51" max="0.99" oninput="hullSliders()" step="0.01"></td>
+                    </tr>
+                    <tr>
+                        <td>Superstructure Angle</td>
+                        <td><span id="sa_val"></span>rad</td>
+                        <td><input type="range" class="slider" id="sa_s" value=0 min="0" max="0.8" oninput="hullSliders()" step="0.01"></td>
+                    </tr>
+
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                
+                    <tr><th colspan="2"><strong>C. Bulkhead Data</strong></th></tr>
+                    <tr>
+                        <td>Name</td><td><span id="bulkhead_n"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Position</td>
+                        <td><span id="bulkhead_p"></span>m</td>
+                        <td><input type="range" class="slider" id="s_bulkhead_p" value=0 min="0" max="1" oninput="update_bh()" step="1"></td>
+                    </tr>
+                    
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                
+                    <tr><th colspan="2"><strong>D. DBB Data</strong></th></tr>
+                    <tr><td>Group</td><td><span id="block_g"></span></td></tr>
+                    <tr>
+                        <td>Classification</td>
+                        <td><span id="block_id"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Name</td>
+                        <td><span id="block_n"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Longitudinal Forward</td>
+                        <td><span id="b_xFwd"></span>m</td>
+                        <td><input type="range" class="slider" id="s_xFwd" value=0 min="0" max="1" oninput="update_block()" step="1"></td>
+                    </tr>
+                    <tr>
+                        <td>Longitudinal Afterward</td>
+                        <td><span id="b_xAft"></span>m</td>
+                        <td><input type="range" class="slider" id="s_xAft" value=0 min="0" max="1" oninput="update_block()" step="1"></td>
+                    </tr>
+                    <tr>
+                        <td>Trasversal Centre</td>
+                        <td><span id="b_yCentre"></span>m</td>
+                        <td><input type="range" class="slider" id="s_yCentre" value=0 min="-1" max="1" oninput="update_block2()" step="1"></td>
+                    </tr>
+                    <tr>
+                        <td>Width</td>
+                        <td><span id="b_ySize"></span>m</td>
+                        <td><input type="range" class="slider" id="s_ySize" value=0 min="0" max="1" oninput="update_block3()" step="1"></td>
+                    </tr>
+                    <tr>
+                        <td>Vertical Height</td>
+                        <td><span id="b_zHeight"></span>m</td>
+                        <td><input type="range" class="slider" id="s_zHeight" value=0 min="0" max="1" oninput="update_block()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Vertical Base</td>
+                        <td><span id="b_zBase"></span>m</td>
+                        <td><input type="range" class="slider" id="s_zBase" value=0 min="0" max="1" oninput="update_block()" step="0.1"></td>
+                    </tr>
+                    <tr>
+                        <td>Area [m2] | Top | Base | Valid</td>
+                        <td colspan="2"><span id="block_a"></span></td>
+                    </tr>
+                    <tr>
+                        <td>Volume [m3] | Total | Valid</td>
+                        <td colspan="2"><span id="block_v"></span></td>
+                    </tr>
+
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                    
+                    <tr><td colspan="3"><a href='#' onclick='downloadCSV1({ filename: "shipd.csv" });'>Download Ship Data</a></td></tr>
+                    <tr><td colspan="3"><a href='#' onclick='downloadCSV({ filename: "blockd.csv" });'>Download DBB Data</a></td></tr>
+                    <tr><td colspan="3"><a href='#' onclick='downloadCSV2({ filename: "blockavwc.csv" });'>Download DBB Areas, Volumes, Weights and Centres</a></td></tr>
+                    <tr><td colspan="3"><a href='#' onclick='downloadCSV3({ filename: "blockp.csv" });'>Download DBB Proximities</a></td></tr>
+                    <tr><td colspan="3"><a href='#' onclick='downloadCSV4({ filename: "blocka.csv" });'>Download DBB Adjacencies</a></td></tr>
+                    <tr><td colspan="3" style="font-size: 8pt">*Download is compatible with Chrome only</td></tr>
+                    
+                    <tr><th colspan="3" style="color:white">|</th></tr>
+                    
+                    <!--<tr><td colspan="3"> <button onclick="trimDBB()" style = "cursor:pointer; Width:200px" title = "Trim DBBs">Trim DBBs</button></td></tr>-->
+                    <!--<tr><td colspan="3"> <button onclick="trimGA()" style = "cursor:pointer; Width:200px" title = "Trim GA">Trim GA</button></td></tr>
+                    <tr><td colspan="3"> <button onclick="trimGA2()" style = "cursor:pointer; Width:200px" title = "Trim GA">Trim GA</button></td></tr>-->
+                                    
+                </table>
+            </div>
+
+            
+            <div class="container">
+                <div class="row" style="width: 100%; margin-top: 20px; padding-bottom: 20px">
+                    <div class="col-lg-12">
+                        
+                        <div id="3dhullform"></div>
+                        <br><br>
+                        <button onclick="offsets()" style = "text-align: center; cursor:pointer; Width:150px; font-size: 10pt; margin:auto; display:block">Update 3D view</button>
+                    </div>
+                </div>
+            </div>
+            
+
+            <div class="container">
+                <div class="row" style="width: 100%; margin-top: 60px">
+                    <div class="col-lg-12">
+                        <h4 style="padding-bottom: 40px">2. Hydrostatic and Stability</h4>
+                        <p>The previously designed vessel presents different properties depending on the loadin condition. Below, the main hydrostatic properties can be found.
+                            Have in mind that you should match next section's dimensions with the output presented below. Besides that, an estimatived for the GZ curve is given.
+                        </p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <p style="font-weight: bold">A. Properties according to the loading condition</p>
+                        <td>
+                            <select id="load_condition" style="font-size: 10pt; width: 30%">
+                                <option value="0">Light Ship</option>
+                                <option value="1">Weight Condition 1</option>
+                                <option value="2">Weight Condition 2</option>
+                            </select>
+                        </td>
+                        
+                        <br><br>
+                
+                        <table id="table_resistance">
+                            <tr> 
+                                <th width="200">Properties</th>
+                                <th width="150" style="text-align: center">Value</th>		
+                            </tr>
+                            <tr> 
+                                <td>Waterline Length (LWL)</td>
+                                <td id="lwl_calc" class= "lwl_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Waterline Beam (BWL)</td>
+                                <td id="bwl_calc" class= "bwl_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Forward Draft</td>
+                                <td id="tf_calc" class= "tf_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Afterward Draft</td>
+                                <td id="ta_calc" class= "ta_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Displacement</td>
+                                <td id="disp_calc" class= "disp_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Cwp</td>
+                                <td id="cwp_calc" class= "cwp_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Cm</td>
+                                <td id="cm_calc" class= "cm_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Cp</td>
+                                <td id="cp_calc" class= "cp_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Cb</td>
+                                <td id="cb_calc" class= "cb_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>BMt</td>
+                                <td id="bmt_calc" class= "bmt_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Transverse Metacentre (KMt)</td>
+                                <td id="kmt_calc" class= "kmt_calc" style="text-align: center"></td>		
+                            </tr>
+                            <tr> 
+                                <td>Metacentric Height (GMt)</td>
+                                <td id="gmt_calc" class= "gmt_calc" style="text-align: center"></td>		
+                            </tr>
+
+                        </table>
+                        <br>
+                        <tr><td colspan="3"><a href='#' style="font-size: 10pt" onclick='downloadCSV5({ filename: "hydrostatics.csv" });'>Download Hydrostatic Properties</a></td></tr>
+
+                    </div>
+                    <div class="col-lg-6">
+                        <p style="font-weight: bold">B. GZ Curve</p>
+                        <p>Validity of method is limited to: 0.40 &#60; C<sub>b </sub>&#60; 0.56, 2.85 &#60; B/T &#60; 4.00, -5deg &#60; K<sub>f </sub>&#60; 15 deg, 0.38 &#60; T/D &#60; 0.56, 0deg &#60; heel angle &#60; 90deg.</p>
+                        <p>Based on Ali, H. (2003).</p>
+                        <div id="myDiv1" style="width: 100%; height: 300px"></div>
+                    </div>
+                </div>
+                <div class="row" style="width: 100%; margin-top: 20px; padding-bottom: 20px">
+                    <div class="col-lg-12">
+                        <br>
+                        <button onclick="plotGZ()" style = "text-align: center; cursor:pointer; Width:250px; font-size: 10pt; margin:auto; display:block">Update Hydrostatic Properties</button>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="container">
+                <div class="row" style="margin-top: 60px; padding-bottom: 40px">
+                    <div class="col-lg-12">
+                        <h4>3. Hydrodynamic Analysis</h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <p>
+                            Holtrop is a method based on statistical regression of model tests and results from ship trials. The method is used to estimate the resistance of displacement ships. 
+                            The database covers a wide range of ships. For extreme shapes, the accuracy of the estimates is not good. The method may be used to assess qualitatively the resistance of a ship design. 
+                            <a href="https://fenix.tecnico.ulisboa.pt/downloadFile/3779577315267/RP_Lecture8.pdf">More info.</a> Initially developed by Jefferson Flor, Thiago Gabriel Monteiro, and Henrique M. Gaspar as a <a href="http://www.shiplab.hials.org/">ShipLab web app</a>.
+                        </p>
+                        <p>
+                            <strong>*Attention, the dimensions at 3.A should be update according to the Table 2.A, this arrangement allows you to easily foresee how any change in the dimensions affect the overall resistance. </strong>
+                        </p>
+                    </div>
+                </div>
+                <br>
+            
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div id="tbl2" style='width:auto; height:auto;'>
+                            <table border = "0"> <!--http://www.tutorialspoint.com/html/html_tables.htm-->
+                                <tr>
+                                    <td width="220"></td>
+                                    <td width="50"></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <th colspan="3"><strong>A. Dimensions*</strong></th>
+                                </tr>
+                                <tr><td>Waterline Length (LWL)</td>
+                                    <td><span id="lwl_val"></span>m</td>
+                                    <td><input type="range" class="slider" id="lwl_s" value=0 min="10" max="300" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>Waterline Beam (BWL)</td>
+                                    <td><span id="bwl_val"></span>m</td><td>
+                                    <input type="range" class="slider" id="bwl_s" value=0 min="5" max="50" oninput="hullSliders()" step="0.1">
+                                </td></tr>
+                                <tr>
+                                    <td>Draught Foreward</td>
+                                    <td><span id="tf_val"></span>m</td>
+                                    <td><input type="range" class="slider" id="tf_s" value=0 min="1" max="30" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>Draught Afteward (m)</td>
+                                    <td><span id="ta_val"></span>m</td>
+                                    <td><input type="range" class="slider" id="ta_s" value=0 min="1" max="30" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>LCB</td>
+                                    <td><span id="lcb_val"></span>%</td>
+                                    <td><input type="range" id="lcb_s" class="slider" value=3 min="-10" max="10" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>Waterplane Coefficient (Cwp)</td>
+                                    <td><span id="cwl_val"></span></td>
+                                    <td><input type="range" id="cwl_s" class="slider" value=0.9 min="0" max="1" oninput="hullSliders()" step="0.01"></td>
+                                </tr>
+                                <tr>
+                                    <td>Block Coefficient (Cb)</td>
+                                    <td><span id="cb_val"></span></td>
+                                    <td><input type="range" id="cb_s" class="slider" value=0.45 min="0" max="1" oninput="hullSliders()" step="0.01"></td>
+                                </tr>
+                                <tr>
+                                    <td>Midship coefficient (Cm)</td>
+                                    <td><span id="mc_val"></span></td>
+                                    <td><input type="range" id="mc_s" class="slider" value=0.8 min="0" max="1" oninput="hullSliders()" step="0.01"></td>
+                                </tr>
+                            </table>
+                            <br>
+
+                            <table border = "0">
+                                <tr>
+                                    <td width="220"></td>
+                                    <td width="50"></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <th colspan="3"><strong>B. Hull Parameters</strong></th>
+                                </tr>
+                                <tr><td>Bulbous bow</td>
+                                    <td><span style="color: white" id="bb_val"></span></td>
+                                    <td><select id="bb_s" oninput="hullSliders()">
+                                        <option value="0">No</option>
+                                        <option value="1">Yes</option>
+                                    </select></td>
+                                </tr>
+                                <tr><td>Transom</td>
+                                    <td><span style="color: white" id="tran_val"></span></td>
+                                    <td><select id="tran_s" oninput="hullSliders()">
+                                        <option value="0">No</option>
+                                        <option value="1">Yes</option>
+                                    </select>
+                                    </td>
+                                </tr>
+                                <tr><td>Afterbody form</td>
+                                    <td><span style="color: white" id="ab_val"></span></td>
+                                    <td><select id="ab_s" oninput="hullSliders()">
+                                        <option value="1">Pram with Gondola</option>
+                                        <option value="2">V-Shaped Sections</option>
+                                        <option value="3">Normal Section Shape</option>
+                                        <option value="4">U-Shaped Sections with Hognes Stern</option>
+                                    </select></td>
+                                </tr>
+                            </table>
+
+                            <br>
+
+                            <table border = "0">
+                                <tr>
+                                    <td width="20"></td>
+                                    <td width="200"></td>
+                                    <td width="50"></td>
+                                    <td></td>
+                                </tr>
+                                <tr><th colspan="3"><strong>C. Appendage Parameters</strong></th></tr>
+                                <tr>
+                                    <td><input type="checkbox" id = "checkbox_app1" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Rudder behind Skeg</td>
+                                    <td><span id="app1"></span></td>
+                                    <td><input type="range" id="slider_app1" class="slider" value=1.5 min=1.5 max=2 oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Area</td>
+                                    <td><span id="area_app1"></span></td>
+                                    <td><input type="range" id="slider_area_app1" class="slider" min=0 value=0 max=50 step=1 oninput="hullSliders()"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox" id = "checkbox_app2" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Rudder behind Stern</td>
+                                    <td><span id="app2"></span></td>
+                                    <td><input type="range" id="slider_app2" class="slider" value=1.3 min=1.3 max=1.5 oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Area</td>
+                                    <td><span id="area_app2"></span></td>
+                                    <td><input type="range" id="slider_area_app2" class="slider" min=0 value=0 max=50 step=1 oninput="hullSliders()"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox" id = "checkbox_app3" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Twin-Screw Balance Rudders</td>
+                                    <td><span id="area_app3"></span></td>
+                                    <td><input type="range" id="slider_area_app3" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox" id = "checkbox_app4" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Shaft Brackets</td>
+                                    <td><span id="area_app4"></span></td>
+                                    <td><input type="range" id="slider_area_app4" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app5" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Skeg</td>
+                                    <td><span id="app5"></span></td>
+                                    <td><input type="range" id="slider_app5" class="slider" value=1.5 min=1.5 max=2 oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Area</td>
+                                    <td><span id="area_app5"></span></td>
+                                    <td><input type="range" id="slider_area_app5" class="slider" min=0 value=0 max=50 step=1 oninput="hullSliders()"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app6" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Strut Bossing</td>
+                                    <td><span id="area_app6"></span></td>
+                                    <td><input type="range" id="slider_area_app6" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app7" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Hull Bossings</td>
+                                    <td><span id="area_app7"></span></td>
+                                    <td><input type="range" id="slider_area_app7" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox" id = "checkbox_app8" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Shafts</td>
+                                    <td><span id="app8"></span></td>
+                                    <td><input type="range" id="slider_app8" class="slider" value=2 min=2 max=4 oninput="hullSliders()" step="1"></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Area</td>
+                                    <td><span id="area_app8"></span></td>
+                                    <td><input type="range" id="slider_area_app8" class="slider" min=0 value=0 max=50 step=1 oninput="Holtrop_calculate()"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app9" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Stabilizer Fins</td>
+                                    <td><span id="area_app9"></span></td>
+                                    <td><input type="range" id="slider_area_app9" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app10" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Dome</td>
+                                    <td><span id="area_app10"></span></td>
+                                    <td><input type="range" id="slider_area_app10" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <!---->
+                                <tr>
+                                    <td><input type="checkbox"id = "checkbox_app11" value = "1" oninput = "Holtrop_calculate()" style="vertical-align:middle"></td>
+                                    <td>Bilge Keel</td>
+                                    <td><span id="area_app11"></span></td>
+                                    <td><input type="range" id="slider_area_app11" class="slider" value=0 min="0" max="50" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                            </table>
+
+                            <br>
+
+                            <p style="font-weight: bold">D. Resistance for the service speed</p>
+                            <table border = "0">
+                                <tr>
+                                    <td width="220">Service speed</td>
+                                    <td width="50"><span id="sp_val"></span> kn</td>
+                                    <td><input type="range" id="sp_s" class="slider" value=12 min="1" max="20" oninput="hullSliders()" step="1"></td>
+                                </tr>
+                            </table>
+                            <br>
+                            <table id="table_resistance">
+                                <tr> 
+                                    <th width="200">Resistance Component</th>
+                                    <th width="150" style="text-align: center">Value [kN]</th>		
+                                </tr>
+                                <tr> 
+                                    <td>Total</td>
+                                    <td id="total" class= "total" style="text-align: center"></td>		
+                                </tr>
+                                <tr> 
+                                    <td>Frictional</td>
+                                    <td id="frictional" class= "frictional" style="text-align: center"></td>		
+                                </tr>
+                                <tr> 
+                                    <td>Form</td>
+                                    <td id="form" class= "form" style="text-align: center"></td>		
+                                </tr>
+                                <tr> 
+                                <td>Appendage</td>
+                                    <td id="appendage" class= "appendage" style="text-align: center"></td>		
+                                </tr>
+                                <td>Wave</td>
+                                    <td id="wave" class= "wave" style="text-align: center"></td>		
+                                </tr>
+                                <tr>
+                                <td>Bulbous</td>
+                                    <td id="bulbous" class= "bulbous" style="text-align: center"></td>		
+                                </tr>
+                                <tr>
+                                <td>Transom</td>
+                                    <td id="transom" class= "transom" style="text-align: center"></td>		
+                                </tr>
+                                <tr>
+                                <td>Correlation</td>
+                                    <td id="correlation" class= "correlation" style="text-align: center"></td>		
+                                </tr>
+
+                            </table>
+                        <br>
+
+                            <tr><th colspan="3"><strong>E. Observation</strong></th></tr>
+                            
+                            <div id="results" class= "results" style="font-size: 10pt"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <p style="font-weight: bold">F. Resistance Components</p>
+                        <!--<div id="graphic" class="demo-placeholder" style="width:100%; height:350px"></div>
+                        <p style="text-align: center"> Froude number</p>
+                        <div id="results"></div>-->
+                        <div id="resistanceComponents"></div>
+
+                        <p style="font-weight: bold">G. Power Required</p>
+                        <div id="powerResistance"></div>
+                        <br>
+                        <button onclick="plotPower()" style = "text-align: center; cursor:pointer; Width:150px; font-size: 10pt; margin:auto; display:block">Update Power Plot</button>
+
+                        
+                    </div>
+                </div>
+            </div>
+
+            <div class="container">
+                <div class="row" style="margin-top: 60px; padding-bottom: 40px">
+                    <div class="col-lg-12">
+                        <h4>4. Seakeeping</h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <p>
+                            Graphical representation of estimated motion responses for ships. Heave, pitch, roll, vertical motion and vertical acceleration
+                            responses are calculated as function of length, breadth, draft, block coefficient, waterline breadth and operational profile. 
+                            Bending moment is also estimated. Values can be changed by clicking and dragging the sliders. Based on the article 
+                            <a href="http://www.sciencedirect.com/science/article/pii/S0029801803001082">Estimation of ship motions using 
+                            closed-form expressions by Jensen and Mansour (2004)</a>.
+                        </p>
+                        <p>
+                            Initially developed by Sthefano L. Andrade and Henrique M. Gaspar as a <a href="http://www.shiplab.hials.org/app/shipmotion/">ShipLab web app</a>.
+                        </p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div id="tbl2" style='width:auto; height:auto;'>
+                            <table border = "0"> <!--http://www.tutorialspoint.com/html/html_tables.htm-->
+
+                                <tr><td width="200"></td><td width="70"></td><td></td></tr>
+                            
+                                <tr><th colspan="3"><strong>A. Vertical Movement Inputs</strong></th></tr>
+                                <tr>
+                                    <td>Relative Position to CG </td>
+                                    <td><span id="cg_val"></span>%</td>
+                                    <td><input type="range" id="cg_s" class="slider" value=0 min="-15" max="15" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+
+                                <tr>
+                                    <td>Wave heading</td>
+                                    <td><span id="heading_val"></span>deg</td>
+                                    <td><input type="range" id="heading_s" class="slider" value=15 min="0" max="180" oninput="hullSliders()" step="1"></td>
+                                </tr>
+
+                                <tr>
+                                    <td>Wave amplitude </td>
+                                    <td><span id="amplitude_val"></span>m</td>
+                                    <td><input type="range" id="amplitude_s" class="slider" value=0 min="0" max="10" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                
+                                <tr><th colspan="3" style="color:white">|</th></tr>
+                                <tr><th colspan="3"><strong>B. Roll Inputs</strong></th></tr>
+                                <tr>
+                                    <td>Roll Natural Period</td>
+                                    <td><span id="roll_val"></span>s</td>
+                                    <td><input type="range" id="roll_s" class="slider" value=0 min="0" max="60" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+
+                                <tr>
+                                    <td>Empirical damping ratio</td>
+                                    <td><span id="damping_val"></span>%</td>
+                                    <td><input type="range" id="damping_s" class="slider" value=0 min="0" max="100" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>Prismatic Length Ratio </td>
+                                    <td><span id="plr_val"></span></td>
+                                    <td><input type="range" id="plr_s" class="slider" value=0.1 min="0.1" max="1" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                                <tr>
+                                    <td>Transverse Metacentric Height</td>
+                                    <td><span id="gmt_val"></span>m</td>
+                                    <td><input type="range" id="gmt_s" class="slider" value=4 min="1" max="30" oninput="hullSliders()" step="0.1"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="col-lg-6">
+                        <p style="font-weight: bold">C. Plots</p>
+                        <td>
+                            <select id="plot_seakeeping" oninput="hullSliders()" style="font-size: 10pt; width: 100%">
+                                <option value="1">Vertical Movement</option>
+                                <option value="2">Vertical Acceleration</option>
+                                <option value="3">Roll Motion</option>
+                            </select>
+                        </td>
+                        <br><br>
+                        <div id="jensenSeakeeping"></div>
+                        <br>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="container">
+                <div class="row" style="margin-top: 80px; margin-bottom: 60px">
+                    <div class="col-lg-12">
+                        <h4 style="text-align: left; margin-bottom: 20px">References</h4>
+                        <p style="margin-bottom: 10px">Ali, H. (2003). <i>GZ Curves of Warships from Form Parameters</i>, MSc Dissertation, UCL, London.</p>
+                        <p style="margin-bottom: 10px">Andrews, D.J. and Dicks, C.A. (1997). <i>The Building Block Design Methodology Applied to Advanced Naval Ship Design</i>. In: Proceedings of IMDC 97, Newcastle, UK.</p>
+                        <p style="margin-bottom: 10px">Jensen, J. J., Mansour, A. E., & Olsen, A. S. (2004). <i>Estimation of ship motions using closed-form expressions</i>. Ocean Engineering, 31(1), 61-85.</p>
+                        <p style="margin-bottom: 10px">van Griethuysen, J. and Fellows, D. (2003). <i>Simple Holtrop - Monohull</i>, [Computer Software], UCL, London.</p>
+                    </div>
+                </div>
+            </div>
+
+        <input type = "file" id = "fileInput" style = "display:none" accept = ".csv">
+        <input type = "file" id = "fileInput1" style = "display:none" accept = ".csv">
+        
+    </body>
+
+    <script>
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Upload ship data and DBB data files (http://www.shiplab.hials.org/app/offset/)
+    $("#Import_shipd").click(function () {
+    $("#fileInput").trigger('click');
+    });
+
+    var fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', function(e) {
+        var file = fileInput.files[0];
+        var reader = new FileReader();
+        var input1 = [];
+        fileInput.value = "";
+        reader.onload = function(e) {
+            var input2 = reader.result.split("\n");
+            var input3 = input2[0].split(",");
+            //for (i = 1; i < input2.length; i++) {
+            for (i = 1; i < input2.length - 1; i++) {
+                var input4 = input2[i].split(",");
+                var input5 = {};
+                for(var j = 0; j < input4.length; j++) {
+                    input5[input3[j].trim()] = input4[j].trim();
+                }
+                input1.push(input5)
+            }
+            //console.log(input1);
+            shipset = input1;
+            
+            //Round LAO BOA to gsm
+            shipset[0].LOA = Math.round(+shipset[0].LOA/gsm)*gsm;
+            shipset[0].BOA = Math.round(+shipset[0].BOA/gsm)*gsm;
+
+            //Sets sliders equal to LOA and BOA (and ship name)
+            document.getElementById("canv_x").value = +shipset[0].LOA;
+            document.getElementById("loa_val").innerHTML = +shipset[0].LOA;
+            document.getElementById("canv_y").value = +shipset[0].BOA;
+            document.getElementById("boa_val").innerHTML = +shipset[0].BOA;
+            document.getElementById("draft_s").value = +shipset[0].D;
+            document.getElementById("draft_val").innerHTML = +shipset[0].D;
+            document.getElementById("shipname").innerHTML = shipset[0].Name;
+            
+            //Sets numerical and slider values for hullform data from shipd file
+            document.getElementById("ms_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[0];
+            document.getElementById("ms_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[0];
+            document.getElementById("bow_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[1];
+            document.getElementById("bow_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[1];
+            document.getElementById("tr_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[2];
+            document.getElementById("tr_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[2];
+            document.getElementById("deck_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[3];
+            document.getElementById("deck_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[3];
+            document.getElementById("tb_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[4];
+            document.getElementById("tb_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[4];
+            document.getElementById("td_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[5];
+            document.getElementById("td_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[5];
+            document.getElementById("acu_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[6];
+            document.getElementById("acu_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[6];
+            document.getElementById("kf_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[7];
+            document.getElementById("kf_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[7];
+            document.getElementById("sa_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[8];
+            document.getElementById("sa_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[8];
+
+            document.getElementById("sp_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[9];
+            document.getElementById("sp_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[9];
+            document.getElementById("cwl_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[10];
+            document.getElementById("cwl_val").innerHTML =+shipset[0].HullData.split(" ").map(parseFloat)[10];
+            document.getElementById("lcb_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[11];
+            document.getElementById("lcb_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[11];
+            document.getElementById("cb_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[12];
+            document.getElementById("cb_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[12];
+            document.getElementById("mc_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[13];
+            document.getElementById("mc_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[13];
+            document.getElementById("bb_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[14];
+            document.getElementById("bb_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[14];
+            document.getElementById("tran_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[15];
+            document.getElementById("tran_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[15];
+            document.getElementById("ab_s").value = +shipset[0].HullData.split(" ").map(parseFloat)[16];
+            document.getElementById("ab_val").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[16];
+
+            document.getElementById("slider_app1").value = +shipset[0].HullData.split(" ").map(parseFloat)[21];
+            document.getElementById("app1").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[21];
+            document.getElementById("slider_area_app1").value = +shipset[0].HullData.split(" ").map(parseFloat)[21];
+            document.getElementById("area_app1").innerHTML = +shipset[0].HullData.split(" ").map(parseFloat)[21];
+            
+            //Get bulkheads
+            nbulkheadsf = shipset[0].Bulkheads.split(" "); //Array with deck names as strings
+            pbulkheadsf = shipset[0].BHPos.split(" ").map(parseFloat); //Array with positions as numbers
+            var pbhf; //Stores each bulkhead position
+            var pbhfa = []; //Array with bulkhead positions
+            for (i in pbulkheadsf) {
+                pbhf = Math.round(pbulkheadsf[i]/gsm)*gsm; //Rounds bulkhead positions to 0.5m
+                pbhfa.push(pbhf);
+            }
+            nbulkheads = nbulkheadsf;
+            pbulkheads = pbhfa;
+            shipset[0].BHPos = pbulkheads.toString().replace(/,/g, " "); //Updates bulkhead position data in shipd file
+            
+            //Get decks
+            ndecksf = shipset[0].Decks.split(" "); //Array with deck names as strings
+            pdecksf = shipset[0].DeckPos.split(" ").map(parseFloat); //Array with positions as numbers
+            var pdf; //Stores each deck position
+            var pdfa = []; //Array with deck positions
+            for (i in pdecksf) {
+                pdf = Math.round(pdecksf[i]*10)/10; //Rounds deck positions to 0.1m
+                pdfa.push(pdf);
+            }
+            ndecks = ndecksf;
+            pdecks = pdfa;
+            shipset[0].DeckPos = pdecks.toString().replace(/,/g, " "); //Updates deck position data in shipd file
+
+            //Round depth to 0.1m
+            shipset[0].D = Math.round(shipset[0].D*10)/10;
+            
+            //Calls on_change function
+            on_change();
+        }
+        reader.readAsText(file);
+    });
+
+
+    $("#Import_blockd").click(function () {
+    $("#fileInput1").trigger('click');
+    });
+
+    var fileInput1 = document.getElementById('fileInput1');
+    fileInput1.addEventListener('change', function(e) {
+        var file = fileInput1.files[0];
+        var reader = new FileReader();
+        var input21 = [];
+        fileInput1.value = "";
+        reader.onload = function(e) {
+            var input22 = reader.result.split("\n");
+            var input23 = input22[0].split(",");
+            //for (i = 1; i < input22.length; i++) {
+            for (i = 1; i < input22.length - 1; i++) {
+                var input24 = input22[i].split(",");
+                var input25 = {};
+                for(var j = 0; j < input24.length; j++) {
+                    input25[input23[j].trim()] = input24[j].trim();
+                }
+                input21.push(input25)
+            }
+            //console.log(input21);
+            blockset = input21;
+            
+            //Calls on_change function
+            on_change();
+        }
+        reader.readAsText(file);
+    });
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Download the CSV results files (http://halistechnology.com/2015/05/28/use-javascript-to-export-your-data-as-csv/)
+    function convertArrayOfObjectsToCSV(args) {
+    var result, ctr, keys, columnDelimiter, lineDelimiter, data;
+
+    data = args.data || null;
+    if (data == null || !data.length) {
+        return null;
+    }
+
+    columnDelimiter = args.columnDelimiter || ',';
+    lineDelimiter = args.lineDelimiter || '\n';
+
+    keys = Object.keys(data[0]);
+
+    result = '';
+    result += keys.join(columnDelimiter);
+    result += lineDelimiter;
+
+    data.forEach(function(item) {
+        ctr = 0;
+        keys.forEach(function(key) {
+            if (ctr > 0) result += columnDelimiter;
+
+            result += item[key];
+            ctr++;
+        });
+        result += lineDelimiter;
+    });
+
+    return result;
+    }
+    function downloadCSV1(args) {
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: shipset
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+    function downloadCSV(args) {
+    var blocksetOut = JSON.parse(JSON.stringify(blockset)); //http://stackoverflow.com/questions/122102/what-is-the-most-efficient-way-to-clone-an-object, https://davidwalsh.name/javascript-clone-array
+    for (i in blocksetOut) {
+        delete blocksetOut[i]["decks"];
+        delete blocksetOut[i]["colour"];
+        delete blocksetOut[i]["grCoo"];
+        delete blocksetOut[i]["areaCells"];
+        delete blocksetOut[i]["areaCellsTop"];
+        delete blocksetOut[i]["DBBArea"];
+        delete blocksetOut[i]["DBBAreaTop"];
+        delete blocksetOut[i]["DBBVol"];
+        delete blocksetOut[i]["xyCentreBase"];
+        delete blocksetOut[i]["zCentre"]; 
+        delete blocksetOut[i]["xyCentreTop"];
+    }
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: blocksetOut
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+    function downloadCSV2(args) {
+    areasCentresProximities();
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: aAndc
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+    function downloadCSV3(args) {
+    areasCentresProximities();
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: proximities
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+    function downloadCSV4(args) {
+    adjacencies();
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: adj
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+    function downloadCSV5(args) {
+    hydrostatics();
+    var data, filename, link;
+    var csv = convertArrayOfObjectsToCSV({
+        data: hydroData
+    });
+    if (csv == null) return;
+
+    filename = args.filename || 'export.csv';
+
+    if (!csv.match(/^data:text\/csv/i)) {
+        csv = 'data:text/csv;charset=utf-8,' + csv;
+    }
+    data = encodeURI(csv);
+
+    link = document.createElement('a');
+    link.setAttribute('href', data);
+    link.setAttribute('download', filename);
+    link.click();
+    }
+
+    </script>
+
+    <script>
+
+    function runXBow() {
+        
+        shipset[0].LOA = Math.round(83.4/gsm)*gsm;
+        shipset[0].BOA = Math.round(18/gsm)*gsm;
+        
+        document.getElementById("canv_x").value = 83.4;
+        document.getElementById("loa_val").innerHTML = 83.4;
+        document.getElementById("canv_y").value = 18;
+        document.getElementById("boa_val").innerHTML = 18;
+        document.getElementById("draft_val").innerHTML = 6.7;
+        document.getElementById("shipname").innerHTML = "PX121";
+
+        document.getElementById("ms_s").value = 2.1;
+        document.getElementById("ms_val").innerHTML = 2.1;
+        document.getElementById("bow_s").value = 3.6;
+        document.getElementById("bow_val").innerHTML = 3.6;
+        document.getElementById("tr_s").value = 10;
+        document.getElementById("tr_val").innerHTML = 10;
+        document.getElementById("deck_s").value = 1.7;
+        document.getElementById("deck_val").innerHTML = 1.7;
+        document.getElementById("tb_s").value = 0.92;
+        document.getElementById("tb_val").innerHTML = 0.92;
+        document.getElementById("td_s").value = 0.42;
+        document.getElementById("td_val").innerHTML = 0.42;
+        document.getElementById("acu_s").value = 0.25;
+        document.getElementById("acu_val").innerHTML = 0.25;
+        document.getElementById("kf_s").value = 0.94;
+        document.getElementById("kf_val").innerHTML = 0.94;
+        document.getElementById("sa_s").value = 0.01;
+        document.getElementById("sa_val").innerHTML = 0.01;
+
+        shipset[0].DeckPos = "8 5 1 0"
+        shipset[0].Decks = "Main Deck-1 Deck-2 Keel"
+        shipset[0].BHPos = "75.5 50 24.5"
+        shipset[0].Bulkheads = "AB BC CD"
+        shipset[0].MaxSpeed = 15.85
+        ndecks = ["Main", "Deck-1", "Deck-2", "Keel"]
+        pdecks = ["8", "5", "1", "0"]
+        nbulkheadsf = ["AB", "BC", "CD"]
+        pbulkheadsf =["75.5", "50", "24.5"]
+
+        on_change();
+
+    }
+
+    function runFrigate() {
+
+        shipset[0].LOA = Math.round(96.6/gsm)*gsm;
+        shipset[0].BOA = Math.round(11.2/gsm)*gsm;
+        
+        document.getElementById("canv_x").value = 96.6;
+        document.getElementById("loa_val").innerHTML = 96.6;
+        document.getElementById("canv_y").value = 11.;
+        document.getElementById("boa_val").innerHTML = 11.2;
+        document.getElementById("draft_val").innerHTML = 9.4;
+        document.getElementById("shipname").innerHTML = "KNM Narvik F304";
+
+        document.getElementById("ms_s").value = 1.5;
+        document.getElementById("ms_val").innerHTML = 1.5;
+        document.getElementById("bow_s").value = 0.1;
+        document.getElementById("bow_val").innerHTML = 0.1;
+        document.getElementById("tr_s").value = 1.5;
+        document.getElementById("tr_val").innerHTML = 1.5;
+        document.getElementById("deck_s").value = 0.8;
+        document.getElementById("deck_val").innerHTML = 0.8;
+        document.getElementById("tb_s").value = 0.9;
+        document.getElementById("tb_val").innerHTML = 0.9;
+        document.getElementById("td_s").value = 0.4;
+        document.getElementById("td_val").innerHTML = 0.4;
+        document.getElementById("acu_s").value = 0.2;
+        document.getElementById("acu_val").innerHTML = 0.2;
+        document.getElementById("kf_s").value = 0.9;
+        document.getElementById("kf_val").innerHTML = 0.9;
+        document.getElementById("sa_s").value = 0.13;
+        document.getElementById("sa_val").innerHTML = 0.13;
+
+        shipset[0].DeckPos = "15.4 12.4 9.4 5.2 1 0"
+        shipset[0].Decks = "02Deck 01Deck Deck1 Deck2 Deck3 Keel"
+        shipset[0].BHPos = "75.5 50 24.5"
+        shipset[0].Bulkheads = "AB BC CD"
+        shipset[0].MaxSpeed = 25
+        ndecks = ["Main", "Deck-1", "Deck-2", "Keel"]
+        pdecks = ["9.4", "5.2", "1", "0"]
+        nbulkheadsf = ["AB", "BC", "CD"]
+        pbulkheadsf =["75.5", "50", "24.5"]
+
+        on_change();
+
+    }
+
+    </script>
+
+</html>

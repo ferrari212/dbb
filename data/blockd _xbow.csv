@@ -1,0 +1,5 @@
+Group,Classification,Name,xFwd,xAft,yCentre,ySize,zHeight,zBase,FixedWeight_lightships,VariableWeight_cond1,VariableWeight_cond2,FluidDensity,AreaRequired,VolRequired
+FLOAT,11,CEM,50,35,0,4,2,1,23,24,25,1,60,100
+MOVE,21,MUD/BRINE,55,30,-6,4,3,5,10,15,20,0.8,60,100
+MOVE,22,MUD/BRINE,55,30,6,4,3,5,10,15,20,0.8,60,100
+INFRA,31,Cargo,50,20,0,15,3,8,38,48,58,0.8,60,100

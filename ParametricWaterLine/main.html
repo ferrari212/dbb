@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+    <html>
+        <head>
+            <title>Parametric Ship Design</title>
+            
+            <!-- SVG plots building -->
+            <script src="https://d3js.org/d3.v4.min.js"></script>
+            
+            <!-- CSS -->
+            <link rel="stylesheet" href="libs/style.css">
+            <link href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/yeti/bootstrap.min.css" rel="stylesheet" integrity="sha384-w6tc0TXjTUnYHwVwGgnYyV12wbRoJQo9iMlC2KdkdmVvntGgzT9jvqNEF/uKaF4m" crossorigin="anonymous">
+        </head>
+        
+        <body> 
+            <div class="container">
+                <div class="row" style="margin-top: 25px">
+                    <div class="col-lg-12">
+                        <div class="page-header" style="text-align: center">
+                            <h1>Parametric Waterplane Design</h1>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 40px">
+                    <div class="col-lg-6">
+                        <div class="bs-component" style="font-size: 9pt">
+                            <h5>Ship Data</h2>
+                            <p>
+                                Waterline modelled through cubic B-splines in which the control points can be dragged and adjusted. Four approximatations are available at the output section.
+                            </p>
+                            <div class="row">
+                                
+                                <div class="col-lg-6">
+                                    <strong>Input</strong><br>
+                                    Overall length: <span id="printLoa">300 m</span> <br>
+                                    Transom fullness: <span id="printTransom">50 %</span>
+                                </div>
+                                <div class="col-lg-6">
+                                    <br>
+                                    <input type="range" class="slider" id="loa" value="300" min="0" max="500" step="1" oninput="showLoa(this.value)">
+                                    <input type="range" class="slider" id="transomFullness" value="50" min="0" max="100" step="1" oninput="showTransom(this.value)">
+                                </div>
+                            </div>
+                            <div class="row" style="padding-top: 30px">
+                                <div class="col-lg-6">
+                                    <strong>Output</strong><br>
+                                    Waterplane Area: <span id="printAwp"> -</span><br>
+                                    Waterplane Coefficient: <span id="printCwp"> -</span><br>
+                                    Centre of Buoyancy: <span id="printLcb"> -</span><br>
+                                    Transversal Moment of Inertia: <span id="printItwp"> -</span><br>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6" style="font-size: 9pt">
+                        <svg id="plot1" height=460 width=760></svg>
+                    </div>
+                </div>
+            </div>
+        </body>
+        
+        <!-- PLOT -->
+        <script>
+                // set the dimensions and margins of the graph
+                var margin = {top: 20, right: 20, bottom: 50, left: 50},
+                    width = 400 - margin.left - margin.right,
+                    height = 200 - margin.top - margin.bottom;
+
+                var loa = 300;
+                var transomFullness = 50;
+                var breadthFullness = 50;
+                var points = [ [0, height-0], [50, height-62], [150, height-70], [250, height-40], [loa, height-0]];
+
+                // set the ranges and domain
+                var x = d3.scaleLinear()
+                    .range([0, width])
+                    .domain([0, width]);
+                var y = d3.scaleLinear()
+                    .range([height, 0])
+                    .domain([0, height]);
+
+                // append the svg obgect to the body of the page
+                // appends a 'group' element to 'svg'
+                // moves the 'group' element to the top left margin
+                var svg = d3.select("#plot1").append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                var curveTypes, lineGenerator, categoryScale, points, numActivePoints, drag;
+                function colorScale(d) {return d === 0 ? '#777' : categoryScale(d);}
+
+                // gridlines in y axis function
+                function make_x_gridlines() {		
+                    return d3.axisBottom(x).scale(x).ticks(width/5)
+                }
+
+                // gridlines in y axis function
+                function make_y_gridlines() {		
+                    return d3.axisLeft(y).scale(y).ticks(height/5)
+                }
+
+                function updatePlot() {
+                    // add the X gridlines
+                    svg.append("g")
+                        .attr("class","grid")
+                        .attr("transform","translate(0," + height + ")")
+                        .call(make_x_gridlines()
+                            .tickSize(-height)
+                            .tickFormat("")
+                        )
+
+                    // Get the data
+                    curveTypes = [
+                        {name: 'curveLinear', curve: d3.curveLinear, active: true, lineString: '', clear: false},
+                        {name: 'curveBasis', curve: d3.curveBasis, active: true, lineString: '', clear: true},
+                    ];
+
+                    lineGenerator = d3.line();
+
+                    categoryScale = d3.scaleOrdinal(d3.schemeCategory10);
+                                        
+                    points[4][0] = loa;
+                    points[0][1] = height - points[1][1] * transomFullness / 100;
+                    numActivePoints = points.length;
+                    
+                    drag = d3.drag()
+                    .on('drag', function(d, i) {
+                        if (i == 1 || i == 2 || i == 3) {
+                            points[i][0] = d3.event.x;
+                            points[i][1] = d3.event.y;
+                        } else if (i == 4) {
+                            points[i][0] = d3.event.x;
+                            document.getElementById("printLoa").innerHTML = d3.event.x.toFixed(0) + " m";
+                            document.getElementById("loa").value = d3.event.x;
+                        } else if (i == 0) {
+                            points[i][1] = d3.event.y;
+                            document.getElementById("transomFullness").value = height - d3.event.y;
+                            var num = (height - d3.event.y) / points[1][1] * 100
+                            document.getElementById("printTransom").innerHTML = num.toFixed(0) + " %";
+                        };
+                        update();
+                        giveArea();
+                    });
+                };
+
+                function updateLines() {
+                    curveTypes.forEach(function(d) {
+                        if(!d.active) return;
+                        lineGenerator.curve(d.curve);
+                        d.lineString = lineGenerator(points.slice(0, numActivePoints));
+                        //console.log(d.lineString);
+                    });
+                    var u = d3.select('svg g')
+                        .selectAll('path')
+                        .data(curveTypes);
+                    u.enter()
+                        .append('path')
+                        .merge(u)
+                        .style('stroke', function(d, i) { return colorScale(i); })
+                        .attr('d', function(d) { return d.lineString;	})
+                        .style('display', function(d) { return d.active ? 'inline' : 'none'; });
+                };
+
+                function updatePoints() {
+                    var u = d3.select('g')
+                        .selectAll('circle')
+                        .data(points.slice(0, numActivePoints));
+                    u.enter()
+                        .append('circle')
+                        .attr('r', 4)
+                        .call(drag)
+                        .merge(u)
+                        .attr('cx', function(d) { return d[0];})
+                        .attr('cy', function(d) { return d[1];});
+                    u.exit().remove();
+                }
+
+                function update() {
+                    updateLines();
+                    updatePoints();
+                }
+                
+                updatePlot();
+                update();
+
+                // add the Y gridlines
+                svg.append("g")			
+                    .attr("class", "grid")
+                    .call(make_y_gridlines()
+                        .tickSize(-width)
+                        .tickFormat("")
+                    )
+
+                // add the X Axis
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x)
+                    .ticks(8));
+
+                // add the Y Axis
+                svg.append("g")
+                    .call(d3.axisLeft(y)
+                    .ticks(5));
+                
+                // text label for the x axis
+                svg.append("text")             
+                    .attr("transform", "translate(" + (width/2) + " ," + (height + margin.top+20) + ")")
+                    .style("text-anchor", "middle")
+                    .text("Length [m]");
+                
+                // text label for the y axis
+                svg.append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 0 - margin.left)
+                    .attr("x",0 - (height / 2))
+                    .attr("dy", "1em")
+                    .style("text-anchor", "middle")
+                    .text("Breadth [m]");
+                
+                var svg = d3.select("#plot")
+                    .append("svg")
+                    .attr("width", 500)
+                    .attr("height", 250);
+                                
+                ///////////////////////////////////////////////////////////
+
+                function showLoa(value) {
+                    document.getElementById("printLoa").innerHTML = value + " m";
+                    loa = document.getElementById("loa").value;
+                    updatePlot();
+                    update();
+                    giveArea();
+                };
+
+                function showTransom(value) {
+                    document.getElementById("printTransom").innerHTML = value + "%";
+                    transomFullness = document.getElementById("transomFullness").value;
+                    updatePlot();
+                    update();
+                    giveArea();
+                }
+
+        </script>
+
+        <!-- OUTPUTS -->
+        <script>
+
+            giveArea()
+
+            function giveArea() {
+                point0X = points[0][0]
+                point0Y = 130 - points[0][1]
+                point1X = points[1][0]
+                point1Y = 130 - points[1][1]
+                point2X = points[2][0]
+                point2Y = 130 - points[2][1]
+                point3X = points[3][0]
+                point3Y = 130 - points[3][1]
+                point4X = points[4][0]
+                point4Y = 130 - points[4][1]
+
+                averageDistanceBtwnPoints = ((point1X - point0X) + (point2X - point1X) + (point3X - point2X) + (point4X - point3X))/4
+                area = (point0Y + 4*point1Y + 2*point2Y + 4*point3Y + point4Y) * averageDistanceBtwnPoints / 3 * 2
+                cwp = area/(point4X*Math.max(point0Y, point1Y, point2Y, point3Y, point4Y)*2)
+
+                lcb = (point0Y*point0X + point1Y*point1X + point2Y*point2X + point3Y*point3X + point4Y*point4X) / (point0Y + point1Y + point2Y + point3Y + point4Y)
+
+                itwp = (Math.pow(point0Y, 3) + 4*Math.pow(point1Y,3) + 2*Math.pow(point2Y, 3) + 4*Math.pow(point3Y, 3) + Math.pow(point4Y, 3)) * averageDistanceBtwnPoints / 3 / 3 * 2
+                
+                document.getElementById("printAwp").innerHTML = area.toFixed(0) + " m<SUP>2</SUP>";
+                document.getElementById("printCwp").innerHTML = cwp.toFixed(2);
+                document.getElementById("printLcb").innerHTML = lcb.toFixed(1) + " m";
+                document.getElementById("printItwp").innerHTML = itwp.toFixed(0) + " m<SUP>4</SUP>";
+            }
+        </script>
+
+</html>

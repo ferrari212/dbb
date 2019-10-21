@@ -427,7 +427,7 @@ plotGZ();
 offsets();
 plotPower();
 Holtrop_calculate();
-calculate_all();
+calculate_jensen();
 
 
 //End of reading .csv
@@ -1002,7 +1002,7 @@ shipset[0].HullData = HullDataUpdated; //Updates hull data in shipd file
 //Calls on_change function
 on_change();
 
-calculate_all();
+calculate_jensen();
 }
 
 //Function that creates deck objects
@@ -2053,6 +2053,7 @@ for (h in cond) {
 loadCondition = document.getElementById("load_condition").value;
 
 $('.lwl_calc').html((LWLTotal[loadCondition]).toFixed(2)+"m")
+$('.lwl_val').html((LWLTotal[loadCondition]).toFixed(2))
 $('.bwl_calc').html((BWLTotal[loadCondition]).toFixed(2)+"m")
 $('.ta_calc').html((TfFwdTotal[loadCondition]).toFixed(2)+"m")
 $('.tf_calc').html((TfAftTotal[loadCondition]).toFixed(2)+"m")

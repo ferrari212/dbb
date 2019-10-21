@@ -8,10 +8,10 @@ var Bending_Moment=[];
 var Roll_Movement=[];
 var wave_period=[];
                 
-calculate_all();
+calculate_jensen();
                 
 //Main Function that will run each time one slider  is changed//					
-function calculate_all(){
+function calculate_jensen(){
             
     //Vector declaration in the the main function -- They receive the properties and are used to plot the curves//
     var Results_array1=[];
